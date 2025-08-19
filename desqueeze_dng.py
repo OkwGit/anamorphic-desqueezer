@@ -40,8 +40,10 @@ def get_lens_info(exiftool_path, input_file):
             str(input_file)
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        output = result.stdout.strip()
+        # Run exiftool with automatic Enter input
+        process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = process.communicate(input='\n')  # Send Enter automatically
+        output = stdout.strip()
         
         # Extract lens model from output (format: "Lens Model                      : SIRUI Z 20mm f/1.8S")
         if "Lens Model" in output:
@@ -59,14 +61,14 @@ def process_dng_file(exiftool_path, input_file, output_file):
     try:
         # Get lens information
         lens_model = get_lens_info(exiftool_path, input_file)
-        print(f"Processing: {input_file.name}")
+        print(f"导入: {input_file.name}")
         
         if lens_model:
-            print(f"  Lens: {lens_model}")
+            print(f"  镜头: {lens_model}")
         
         # Check if it's the SIRUI anamorphic lens
         if lens_model == "SIRUI Z 20mm f/1.8S":
-            print(f"  Applying anamorphic desqueeze (1.33x stretch)")
+            print(f"  是电影镜头——>启用反压缩anamorphic desqueeze (1.33x stretch)")
             
             # Command to apply DefaultScale = 1.33 1.0 (1.33x horizontal stretch)
             cmd = [
@@ -83,7 +85,7 @@ def process_dng_file(exiftool_path, input_file, output_file):
             result = subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
             
         else:
-            print(f"  Copying file without desqueeze (not anamorphic lens)")
+            print(f"  不是电影镜头——>不启用反压缩（anamorphic desqueeze） 直接复制文件")
             
             # Command to just copy the file
             cmd = [
@@ -99,7 +101,7 @@ def process_dng_file(exiftool_path, input_file, output_file):
             result = subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
         
         if result.returncode == 0:
-            print(f"✓ Successfully processed: {output_file.name}")
+            print(f"✓ 存为: {output_file.name}")
             return True
         else:
             print(f"✗ Error processing {input_file.name}: {result.stderr}")
