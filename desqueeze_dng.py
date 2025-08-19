@@ -37,6 +37,7 @@ def process_dng_file(exiftool_path, input_file, output_file):
         # Command to apply DefaultScale = 1.33 1.0 (1.33x horizontal stretch)
         cmd = [
             exiftool_path,
+            "-F",                       # Force overwrite without confirmation
             "-DefaultScale=1.33 1.0",  # Horizontal stretch by 1.33x
             "-o", str(output_file),     # Output file
             str(input_file)             # Input file
@@ -44,8 +45,10 @@ def process_dng_file(exiftool_path, input_file, output_file):
         
         print(f"Processing: {input_file.name}")
         
-        # Run exiftool
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        # Run exiftool with automatic Enter input
+        process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = process.communicate(input='\n')  # Send Enter automatically
+        result = subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
         
         if result.returncode == 0:
             print(f"✓ Successfully processed: {output_file.name}")
