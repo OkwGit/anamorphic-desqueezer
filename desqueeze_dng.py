@@ -31,24 +31,72 @@ def create_output_directory():
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
+def get_lens_info(exiftool_path, input_file):
+    """Get lens information from DNG file."""
+    try:
+        cmd = [
+            exiftool_path,
+            "-LensModel",
+            str(input_file)
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        output = result.stdout.strip()
+        
+        # Extract lens model from output (format: "Lens Model                      : SIRUI Z 20mm f/1.8S")
+        if "Lens Model" in output:
+            lens_model = output.split(":")[-1].strip()
+            return lens_model
+        else:
+            return None
+            
+    except Exception as e:
+        print(f"Warning: Could not read lens info for {input_file.name}: {e}")
+        return None
+
 def process_dng_file(exiftool_path, input_file, output_file):
     """Process a single DNG file with exiftool."""
     try:
-        # Command to apply DefaultScale = 1.33 1.0 (1.33x horizontal stretch)
-        cmd = [
-            exiftool_path,
-            "-F",                       # Force overwrite without confirmation
-            "-DefaultScale=1.33 1.0",  # Horizontal stretch by 1.33x
-            "-o", str(output_file),     # Output file
-            str(input_file)             # Input file
-        ]
-        
+        # Get lens information
+        lens_model = get_lens_info(exiftool_path, input_file)
         print(f"Processing: {input_file.name}")
         
-        # Run exiftool with automatic Enter input
-        process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        stdout, stderr = process.communicate(input='\n')  # Send Enter automatically
-        result = subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
+        if lens_model:
+            print(f"  Lens: {lens_model}")
+        
+        # Check if it's the SIRUI anamorphic lens
+        if lens_model == "SIRUI Z 20mm f/1.8S":
+            print(f"  Applying anamorphic desqueeze (1.33x stretch)")
+            
+            # Command to apply DefaultScale = 1.33 1.0 (1.33x horizontal stretch)
+            cmd = [
+                exiftool_path,
+                "-F",                       # Force overwrite without confirmation
+                "-DefaultScale=1.33 1.0",  # Horizontal stretch by 1.33x
+                "-o", str(output_file),     # Output file
+                str(input_file)             # Input file
+            ]
+            
+            # Run exiftool with automatic Enter input
+            process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout, stderr = process.communicate(input='\n')  # Send Enter automatically
+            result = subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
+            
+        else:
+            print(f"  Copying file without desqueeze (not anamorphic lens)")
+            
+            # Command to just copy the file
+            cmd = [
+                exiftool_path,
+                "-F",                       # Force overwrite without confirmation
+                "-o", str(output_file),     # Output file
+                str(input_file)             # Input file
+            ]
+            
+            # Run exiftool with automatic Enter input
+            process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout, stderr = process.communicate(input='\n')  # Send Enter automatically
+            result = subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
         
         if result.returncode == 0:
             print(f"✓ Successfully processed: {output_file.name}")
