@@ -27,7 +27,18 @@ def get_exiftool_path():
 
 def create_output_directory():
     """Create the OUTPUT directory if it doesn't exist."""
-    output_dir = Path("TEST_IMAGE/OUTPUT")
+    base_output_dir = Path("TEST_IMAGE/OUTPUT")
+    
+    # Check if OUTPUT directory exists and is not empty
+    if base_output_dir.exists() and any(base_output_dir.iterdir()):
+        # Create a new directory with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path(f"TEST_IMAGE/OUTPUT_{timestamp}")
+        print(f"\033[33mOutput 文件夹有东西. 创建新文件夹: {output_dir.name}\033[0m")
+    else:
+        output_dir = base_output_dir
+    
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
@@ -53,7 +64,7 @@ def get_lens_info(exiftool_path, input_file):
             return None
             
     except Exception as e:
-        print(f"Warning: Could not read lens info for {input_file.name}: {e}")
+        print(f"\033[31mWarning: Could not read lens info for {input_file.name}: {e}\033[0m")
         return None
 
 def process_dng_file(exiftool_path, input_file, output_file):
@@ -68,7 +79,7 @@ def process_dng_file(exiftool_path, input_file, output_file):
         
         # Check if it's the SIRUI anamorphic lens
         if lens_model == "SIRUI Z 20mm f/1.8S":
-            print(f"  ➲➲是电影镜头——>启用反压缩anamorphic desqueeze (1.33x stretch)")
+            print(f"  ➲是电影镜头——>启用反压缩anamorphic desqueeze (1.33x stretch)")
             
             # Command to apply DefaultScale = 1.33 1.0 (1.33x horizontal stretch)
             cmd = [
@@ -107,20 +118,20 @@ def process_dng_file(exiftool_path, input_file, output_file):
                 os.chmod(output_file, 0o666)  # Set read/write permissions for all users
                 print(f"✓ 保存,并设为可读写: {output_file.name}")
             except Exception as e:
-                print(f"Warning: Could not set permissions for {output_file.name}: {e}")
+                print(f"\033[31mWarning: Could not set permissions for {output_file.name}: {e}\033[0m")
                 print(f"✓ 保存,但无法设为可读写: {output_file.name}")
             return True
         else:
-            print(f"✗ Error processing {input_file.name}: {result.stderr}")
+            print(f"\033[31m✗ Error processing {input_file.name}: {result.stderr}\033[0m")
             return False
             
     except subprocess.CalledProcessError as e:
-        print(f"✗ Error processing {input_file.name}: {e}")
-        print(f"Command output: {e.stdout}")
-        print(f"Error output: {e.stderr}")
+        print(f"\033[31m✗ Error processing {input_file.name}: {e}\033[0m")
+        print(f"\033[31mCommand output: {e.stdout}\033[0m")
+        print(f"\033[31mError output: {e.stderr}\033[0m")
         return False
     except Exception as e:
-        print(f"✗ Unexpected error processing {input_file.name}: {e}")
+        print(f"\033[31m✗ Unexpected error processing {input_file.name}: {e}\033[0m")
         return False
 
 def main():
@@ -161,18 +172,18 @@ def main():
             success_count += 1
         else:
             error_count += 1
-            print(f"Stopping due to error with file: {dng_file.name}")
+            print(f"\033[31mStopping due to error with file: {dng_file.name}\033[0m")
             break
     
     print()
     print("=" * 50)
-    print(f"Processing complete!")
-    print(f"Successfully processed: {success_count} file(s)")
+    print(f"\033[32m完成!\033[0m")
+    print(f"\033[32m导出: {success_count} 张(s)\033[0m")
     if error_count > 0:
-        print(f"Errors encountered: {error_count} file(s)")
+        print(f"\033[31mErrors encountered: {error_count} file(s)\033[0m")
         sys.exit(1)
     else:
-        print("All files processed successfully!")
+        print(f"\033[32mAll files processed successfully!\033[0m")
 
 if __name__ == "__main__":
     main() 
