@@ -68,7 +68,7 @@ def process_dng_file(exiftool_path, input_file, output_file):
         
         # Check if it's the SIRUI anamorphic lens
         if lens_model == "SIRUI Z 20mm f/1.8S":
-            print(f"  是电影镜头——>启用反压缩anamorphic desqueeze (1.33x stretch)")
+            print(f"  ➲➲是电影镜头——>启用反压缩anamorphic desqueeze (1.33x stretch)")
             
             # Command to apply DefaultScale = 1.33 1.0 (1.33x horizontal stretch)
             cmd = [
@@ -85,7 +85,7 @@ def process_dng_file(exiftool_path, input_file, output_file):
             result = subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
             
         else:
-            print(f"  不是电影镜头——>不启用反压缩（anamorphic desqueeze） 直接复制文件")
+            print(f"  ▶▶不是电影镜头——>不启用反压缩（anamorphic desqueeze） 直接复制文件")
             
             # Command to just copy the file
             cmd = [
@@ -101,7 +101,14 @@ def process_dng_file(exiftool_path, input_file, output_file):
             result = subprocess.CompletedProcess(cmd, process.returncode, stdout, stderr)
         
         if result.returncode == 0:
-            print(f"✓ 存为: {output_file.name}")
+            # Ensure the output file has write permissions
+            try:
+                import os
+                os.chmod(output_file, 0o666)  # Set read/write permissions for all users
+                print(f"✓ 保存,并设为可读写: {output_file.name}")
+            except Exception as e:
+                print(f"Warning: Could not set permissions for {output_file.name}: {e}")
+                print(f"✓ 保存,但无法设为可读写: {output_file.name}")
             return True
         else:
             print(f"✗ Error processing {input_file.name}: {result.stderr}")
