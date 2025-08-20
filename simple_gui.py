@@ -40,15 +40,28 @@ class DesqueezeGUI:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(2, weight=1)
+        main_frame.rowconfigure(5, weight=1)
         
         # Title
-        title_label = ttk.Label(main_frame, text="DNG De-squeeze Tool", font=("Arial", 16, "bold"))
+        title_label = ttk.Label(main_frame, text="电影镜头DNG De-squeeze Tool", font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        
+        # Input folder selection frame
+        input_frame = ttk.LabelFrame(main_frame, text="Input Folder", padding="10")
+        input_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        input_frame.columnconfigure(1, weight=1)
+        
+        # Input folder selection
+        ttk.Label(input_frame, text="Source Folder:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
+        input_entry = ttk.Entry(input_frame, textvariable=self.input_folder, width=50)
+        input_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
+        
+        browse_button = ttk.Button(input_frame, text="Browse", command=self.browse_input_folder)
+        browse_button.grid(row=0, column=2)
         
         # Status frame
         status_frame = ttk.LabelFrame(main_frame, text="Status", padding="10")
-        status_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        status_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
         # Status labels
         self.status_label = ttk.Label(status_frame, text="Ready to process DNG files")
@@ -62,9 +75,30 @@ class DesqueezeGUI:
         self.progress_bar = ttk.Progressbar(status_frame, variable=self.progress_var, maximum=100)
         self.progress_bar.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(10, 0))
         
+        # Saving options frame
+        saving_frame = ttk.LabelFrame(main_frame, text="Saving Options", padding="10")
+        saving_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        saving_frame.columnconfigure(1, weight=1)
+        
+        # Save to location
+        ttk.Label(saving_frame, text="Save To:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
+        save_combo = ttk.Combobox(saving_frame, textvariable=self.output_folder, values=["Original File Location", "Custom Folder"], state="readonly", width=30)
+        save_combo.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
+        save_combo.bind("<<ComboboxSelected>>", self.on_save_location_change)
+        
+        browse_output_button = ttk.Button(saving_frame, text="Browse", command=self.browse_output_folder)
+        browse_output_button.grid(row=0, column=2)
+        
+        # Save to subfolder
+        subfolder_check = ttk.Checkbutton(saving_frame, text="Save to subfolder named", variable=self.save_to_subfolder)
+        subfolder_check.grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
+        
+        subfolder_entry = ttk.Entry(saving_frame, textvariable=self.subfolder_name, width=30)
+        subfolder_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
+        
         # Buttons frame
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=3, column=0, columnspan=2, pady=(10, 0))
+        button_frame.grid(row=4, column=0, columnspan=2, pady=(10, 0))
         
         # Process button
         self.process_button = ttk.Button(button_frame, text="Process DNG Files", command=self.start_processing)
@@ -80,7 +114,7 @@ class DesqueezeGUI:
         
         # Output text area
         output_frame = ttk.LabelFrame(main_frame, text="Processing Output", padding="10")
-        output_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
+        output_frame.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
         output_frame.columnconfigure(0, weight=1)
         output_frame.rowconfigure(0, weight=1)
         
@@ -91,18 +125,45 @@ class DesqueezeGUI:
         # Initial status check
         self.update_status()
         
+        # Store references to UI elements
+        self.save_combo = save_combo
+        self.browse_output_button = browse_output_button
+        
+        # Initialize browse button state
+        self.on_save_location_change()
+        
     def update_status(self):
         """Update status information."""
-        test_image_dir = Path("TEST_IMAGE")
-        if test_image_dir.exists():
-            dng_files = list(test_image_dir.glob("*.dng"))
+        input_dir = Path(self.input_folder.get())
+        if input_dir.exists():
+            dng_files = list(input_dir.glob("*.dng"))
             count = len(dng_files)
             if count > 0:
-                self.file_count_label.config(text=f"Found {count} DNG file(s) in TEST_IMAGE folder")
+                self.file_count_label.config(text=f"Found {count} DNG file(s) in {input_dir.name} folder")
             else:
-                self.file_count_label.config(text="No DNG files found in TEST_IMAGE folder")
+                self.file_count_label.config(text=f"No DNG files found in {input_dir.name} folder")
         else:
-            self.file_count_label.config(text="TEST_IMAGE folder not found")
+            self.file_count_label.config(text=f"Folder not found: {input_dir}")
+    
+    def browse_input_folder(self):
+        """Browse for input folder."""
+        folder = filedialog.askdirectory(title="Select Input Folder")
+        if folder:
+            self.input_folder.set(folder)
+            self.update_status()
+    
+    def browse_output_folder(self):
+        """Browse for output folder."""
+        folder = filedialog.askdirectory(title="Select Output Folder")
+        if folder:
+            self.output_folder.set(folder)
+    
+    def on_save_location_change(self, event=None):
+        """Handle save location change."""
+        if self.output_folder.get() == "Original File Location":
+            self.browse_output_button.config(state="disabled")
+        else:
+            self.browse_output_button.config(state="normal")
     
     def log_message(self, message, color="black"):
         """Add message to output text area."""
@@ -118,7 +179,19 @@ class DesqueezeGUI:
     
     def open_output_folder(self):
         """Open the output folder in file explorer."""
-        output_dir = Path("TEST_IMAGE/OUTPUT")
+        if self.output_folder.get() == "Original File Location":
+            # Use the input folder with subfolder
+            base_dir = Path(self.input_folder.get())
+            if self.save_to_subfolder.get():
+                output_dir = base_dir / self.subfolder_name.get()
+            else:
+                output_dir = base_dir
+        else:
+            # Use custom output folder
+            output_dir = Path(self.output_folder.get())
+            if self.save_to_subfolder.get():
+                output_dir = output_dir / self.subfolder_name.get()
+        
         if output_dir.exists():
             if sys.platform == "win32":
                 os.startfile(str(output_dir))
@@ -141,17 +214,30 @@ class DesqueezeGUI:
         return str(exiftool_path)
     
     def create_output_directory(self):
-        """Create the OUTPUT directory if it doesn't exist."""
-        base_output_dir = Path("TEST_IMAGE/OUTPUT")
+        """Create the output directory based on user settings."""
+        if self.output_folder.get() == "Original File Location":
+            # Use the input folder with subfolder
+            base_dir = Path(self.input_folder.get())
+            if self.save_to_subfolder.get():
+                output_dir = base_dir / self.subfolder_name.get()
+            else:
+                output_dir = base_dir
+        else:
+            # Use custom output folder
+            output_dir = Path(self.output_folder.get())
+            if self.save_to_subfolder.get():
+                output_dir = output_dir / self.subfolder_name.get()
         
-        # Check if OUTPUT directory exists and is not empty
-        if base_output_dir.exists() and any(base_output_dir.iterdir()):
+        # Check if output directory exists and is not empty
+        if output_dir.exists() and any(output_dir.iterdir()):
             # Create a new directory with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_dir = Path(f"TEST_IMAGE/OUTPUT_{timestamp}")
-            self.log_message(f"Output 文件夹有东西. 创建新文件夹: {output_dir.name}")
-        else:
-            output_dir = base_output_dir
+            if self.save_to_subfolder.get():
+                new_output_dir = output_dir.parent / f"{self.subfolder_name.get()}_{timestamp}"
+            else:
+                new_output_dir = output_dir.parent / f"output_{timestamp}"
+            self.log_message(f"Output 文件夹有东西. 创建新文件夹: {new_output_dir.name}")
+            output_dir = new_output_dir
         
         output_dir.mkdir(parents=True, exist_ok=True)
         return output_dir
@@ -245,7 +331,7 @@ class DesqueezeGUI:
     def process_files(self):
         """Process all DNG files in a separate thread."""
         try:
-            self.log_message("DNG De-squeeze Tool")
+            self.log_message("OKWsDNG De-squeeze Tool")
             self.log_message("=" * 50)
             
             # Get exiftool path
@@ -259,12 +345,12 @@ class DesqueezeGUI:
             output_dir = self.create_output_directory()
             self.log_message(f"Output directory: {output_dir}")
             
-            # Find all DNG files in TEST_IMAGE folder
-            test_image_dir = Path("TEST_IMAGE")
-            dng_files = list(test_image_dir.glob("*.dng"))
+            # Find all DNG files in input folder
+            input_dir = Path(self.input_folder.get())
+            dng_files = list(input_dir.glob("*.dng"))
             
             if not dng_files:
-                self.log_message("No DNG files found in TEST_IMAGE folder")
+                self.log_message(f"No DNG files found in {input_dir} folder")
                 return
             
             self.log_message(f"Found {len(dng_files)} DNG file(s) to process")
